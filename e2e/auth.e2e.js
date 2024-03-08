@@ -1,7 +1,19 @@
 const request = require('supertest');
 const createApp = require('../src/app');
 const models = require('../src/db/models/user.model');
-const { upSeed, downSeed } = require('./utils/seed');
+const { upSeed, downSeed } = require('./utils/umzug');
+
+const mockSendEmail = jest.fn();
+
+jest.mock('nodemailer', () => {
+  return {
+    createTransport: jest.fn().mockImplementation(() => {
+      return {
+        sendMail: mockSendEmail,
+      };
+    }),
+  };
+});
 
 describe('test for /users path', () => {
   let app = null;
@@ -40,6 +52,35 @@ describe('test for /users path', () => {
       expect(body.access_token).toBeTruthy();
       expect(body.user.email).toEqual(user.email);
       expect(body.user.password).toBeUndefined();
+    });
+  });
+
+  describe('POST / recovery ', () => {
+    beforeAll(() => {
+      mockSendEmail.mockClear();
+    });
+
+    test('should return 401', async () => {
+      const inputData = { email: 'email@fake.com' };
+      const { statusCode } = await api
+        .post('/api/v1/auth/recovery')
+        .send(inputData);
+      expect(statusCode).toBe(401);
+    });
+
+    test('should send email', async () => {
+      const user = await models.User.findByPk('1');
+      const inputData = {
+        email: user.email,
+      };
+      mockSendEmail.mockResolvedValue(true);
+      const { statusCode, body } = await api
+        .post('/api/v1/auth/recovery')
+        .send(inputData);
+
+      expect(statusCode).toBe(200);
+      expect(body.message).toEqual('mail sent');
+      expect(mockSendEmail).toHaveBeenCalled();
     });
   });
 

@@ -1,7 +1,7 @@
 const request = require('supertest');
 const createApp = require('../src/app');
 const models = require('../src/db/models/user.model');
-const { upSeed, downSeed } = require('./utils/seed');
+const { upSeed, downSeed } = require('./utils/umzug');
 
 describe('test for /users path', () => {
   let app = null;
